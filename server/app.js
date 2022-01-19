@@ -19,6 +19,7 @@ import express from 'express';
 import cookieParser from 'cookie-parser';
 import logger from 'morgan';
 import apiMetrics from "prometheus-api-metrics";
+import cors from "cors";
 
 import { universalParseValue, allMetrics } from "./universalMetricParser";
 import schedule from 'node-schedule';
@@ -36,13 +37,13 @@ var forceBmwNotCharging = false;
 var latestCarData = {}
 var latestChargerData = {}
 
-var defaultTargetPercent = 80;
-const targetPercent = defaultTargetPercent;
+const defaultTargetPercent = 80;
+var targetPercent = defaultTargetPercent;
 var totalBatteryCapacity = 32;
 
 var app = express();
 app.use(apiMetrics());
-
+app.use(cors());
 app.use(logger("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -281,6 +282,7 @@ async function update() {
     isCarCharging = false;
     forceBmwCharging = false;
     forceBmwNotCharging = false;
+    targetPercent = defaultTargetPercent;
   }
 }
 var isUpdateRunning = false;

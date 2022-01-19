@@ -36,7 +36,8 @@ var forceBmwNotCharging = false;
 var latestCarData = {}
 var latestChargerData = {}
 
-const targetPercent = 90;
+var defaultTargetPercent = 80;
+const targetPercent = defaultTargetPercent;
 var totalBatteryCapacity = 32;
 
 var app = express();
@@ -315,11 +316,19 @@ setInterval(async function(){
 
 
 app.get('/status', async (req, res) => {
-  res.json({isBimmerChargingAtHome: isCarCharging, carStatus: latestCarData, chargerStatus: latestChargerData, chargeLimit: await getChargeLimit(), didLockUp: didLockUp})
+  res.json({isBimmerChargingAtHome: isCarCharging, carStatus: latestCarData, chargerStatus: latestChargerData, chargeLimit: await getChargeLimit(), didLockUp: didLockUp, targetPercent: targetPercent})
 })
 
 app.get('/forceBmwCharging', async (req, res) => {
   forceBmwCharging = true
+  res.json({status: "OK"})
+});
+
+app.post('/setTargetPercent', async (req, res) => {
+  console.log(req.body);
+  targetPercent = req.body.targetPercent
+  isCarCharging = false;
+  isChargerCharing = false;
   res.json({status: "OK"})
 });
 

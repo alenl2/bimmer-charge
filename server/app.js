@@ -256,7 +256,7 @@ async function update() {
         var carData = await getCarData();
 
         if ((carData.isCharging == true && carData.isHome && isCarCharging == false) || forceBmwCharging) {
-          isCarCharging == true;
+          isCarCharging = true;
           console.log("TRANSITION WE ARE CHARGING BMW ON OPENEVSE!!!!");
 
           //update status from EVSE to get actual session energy

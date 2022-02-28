@@ -37,7 +37,7 @@ var forceBmwNotCharging = false;
 var latestCarData = {}
 var latestChargerData = {}
 
-const defaultTargetPercent = 80;
+const defaultTargetPercent = 90;
 var targetPercent = defaultTargetPercent;
 var totalBatteryCapacity = 32;
 
@@ -49,6 +49,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 function getState(state) {
   var estate;
@@ -177,6 +182,7 @@ async function getCarData() {
     } catch (err) {
       didLockUp = true;
       console.error(err);
+      await sleep(60000);
     }
   }
 }
@@ -329,6 +335,7 @@ app.get('/forceBmwCharging', async (req, res) => {
 app.post('/setTargetPercent', async (req, res) => {
   console.log(req.body);
   targetPercent = req.body.targetPercent
+  defaultTargetPercent = req.body.targetPercent
   isCarCharging = false;
   isChargerCharing = false;
   res.json({status: "OK"})

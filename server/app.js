@@ -9,7 +9,6 @@ const config = {
 }
 console.log(config);
 
-import { ConnectedDrive, Regions } from 'bmw-connected-drive';
 import axios from 'axios';
 
 import "core-js/stable";
@@ -24,8 +23,7 @@ import cors from "cors";
 import { universalParseValue, allMetrics } from "./universalMetricParser";
 import schedule from 'node-schedule';
 import { Registry } from 'prom-client';
-
-const api = new ConnectedDrive(config.username, config.password, Regions.RestOfWorld);
+import spawnAsync from '@expo/spawn-async';
 
 var isCarCharging = false;
 var lockUpdate = false;
@@ -37,7 +35,7 @@ var forceBmwNotCharging = false;
 var latestCarData = {}
 var latestChargerData = {}
 
-const defaultTargetPercent = 90;
+const defaultTargetPercent = 80;
 var targetPercent = defaultTargetPercent;
 var totalBatteryCapacity = 32;
 
@@ -133,42 +131,45 @@ async function getCarMetrics() {
   console.log("Updateing car metrics");
   var ret = { isCharging: false, carSoc: 0, isHome: false }
 
-  const vehicles = await api.getVehicles();
+  const bl = await spawnAsync('bash', ['-c', "bimmerconnected status "+config.username+" "+ config.password + " rest_of_world"])
 
-  for (var i = 0; i < vehicles.length; i++) {
-    var carStatus = await api.getVehicleStatus(vehicles[i].vin);
-    var deviceId = "bmw0" + (i + 1);
-    universalParseValue(vehicles[i].vin, deviceId + "_" + "vin", deviceId);
+  console.log("START bimmerconnected ountput")
+  console.log(bl.stderr);
+  console.log("END bimmerconnected outout")
+  
+  var sample = bl.stdout;
+  var data = JSON.parse(sample.substring(sample.indexOf('data:')+5));
+  //console.log(data);
 
-    delete carStatus.updateTimeConverted
-    delete carStatus.updateTimeConvertedTime
-    delete carStatus.lastChargingEndReason
-    delete carStatus.updateTimeConvertedDate
-    delete carStatus.lscTrigger
-    delete carStatus.updateTime
-    delete carStatus.lastUpdateReason
+  var status = data.status;
+  var attr = data.attributes;
 
-    for (const metric in carStatus) {
-      var metricName = metric;
-      universalParseValue(carStatus[metric], deviceId + "_" + metricName, deviceId);
-    }
+  var deviceId = "bmw01";
+  universalParseValue(attr.vin, deviceId + "_" + "vin", deviceId);
 
-    if (vehicles[i].vin === config.targetVin) {
-      totalBatteryCapacity = carStatus.batterySizeMax;
 
-      var toHome = calcCrow(config.homeLat, config.homeLon, carStatus.gpsLat, carStatus.gpsLng)
-      if (toHome < 500) {
-        ret.isHome = true;
-      }
-      if (carStatus.chargingStatus === "CHARGINGACTIVE") {
-        ret.isCharging = true;
-      }
-      ret.carSoc = carStatus.chargingLevelHv
-    }
+  universalParseValue(status.gps_position[0], deviceId + "_" + "gpsLat", deviceId);
+  universalParseValue(status.gps_position[1], deviceId + "_" + "gpsLng", deviceId);
+  universalParseValue(status.gps_heading, deviceId + "_" + "heading", deviceId);
+  universalParseValue(status.mileage[0], deviceId + "_" + "vin", deviceId);
+  universalParseValue(status.remaining_range_electric[0], deviceId + "_" + "beRemainingRangeElectric", deviceId);
+
+  console.log(status);
+
+  var toHome = calcCrow(config.homeLat, config.homeLon, status.gps_position[0], status.gps_position[1])
+  if (toHome < 500) {
+    ret.isHome = true;
   }
+  if (status.charging_status === "CHARGING") {
+    ret.isCharging = true;
+  }
+  ret.carSoc = status.charging_level_hv
+  
+  
   console.log("Parsed data from connected services")
   console.log(ret);
   
+  console.log(ret);
   return ret;
 }
 
@@ -276,7 +277,12 @@ async function update() {
           var currentCapacity = totalBatteryCapacity * (currentSoc / 100)
           var toCharge = targetKwh - currentCapacity + sessionEnergy;
 
-          await setChargeLimit(toCharge);
+          if(toCharge <= 0){
+            await setChargeLimit(1);
+          }else{
+            await setChargeLimit(toCharge);
+          }
+          
         }
         lockUpdate = false;
       }, 60000);

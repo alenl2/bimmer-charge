@@ -1,7 +1,7 @@
 const prom = require("prom-client");
 
-var metricsDict = {};
-var allMetrics = {};
+let metricsDict = {};
+let allMetrics = {};
 
 function isNumeric(str) {
   if (typeof str != "string") return false;
@@ -19,7 +19,7 @@ const universalParseValue = (valueRaw, metricName, deviceId) => {
 
   valueRaw = valueRaw.toString();
 
-  var value = Number(valueRaw);
+  let value = Number(valueRaw);
   if (valueRaw === "yes") {
     value = 1;
   }
@@ -73,9 +73,9 @@ const universalParseValue = (valueRaw, metricName, deviceId) => {
     value = -1;
   }
 
-  var valueListRaw = valueRaw.split(",");
-  var valueList = [];
-  for (var val of valueListRaw) {
+  let valueListRaw = valueRaw.split(",");
+  let valueList = [];
+  for (let val of valueListRaw) {
     if (isNumeric(val)) {
       valueList.push(Number(val));
     } else {
@@ -91,13 +91,13 @@ const universalParseValue = (valueRaw, metricName, deviceId) => {
     metricsDict[metricName] = gauge;
   }
 
-  var retmetrics = [];
-  for (var i = 0; i < valueList.length; i++) {
-    var rawV = valueRaw;
+  let retmetrics = [];
+  for (let i = 0; i < valueList.length; i++) {
+    let rawV = valueRaw;
     if (isNaN(valueList[i]) == false) {
       rawV = "null"; //no need since its already in there
     }
-    var gauge = metricsDict[metricName];
+    let gauge = metricsDict[metricName];
     gauge.set({ valueRaw: rawV, device: deviceId, metricIndex: i }, valueList[i]);
 
     allMetrics[metricName + "_" + i] = valueList[i];
